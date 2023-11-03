@@ -108,24 +108,38 @@
   
   * 解决
   
-    * 首先分析异常发生的代码，即 `src/sbi.rs:40`，发现操作系统并没有正常关闭。所以考虑sbi调用的接口是否发生了变化。但查询后，发现sbi调用的接口和常量均和原来相同。[常量](https://elixir.bootlin.com/linux/latest/C/ident/SBI_EXT_0_1_SHUTDOWN) 与 [接口文档](https://docs.rs/rustsbi/0.2.0-alpha.10/rustsbi/index.html)
-    * 使用搜索引擎搜到了 [一条rCore-Tutorial仓库的Issue](https://github.com/rcore-os/rCore-Tutorial/issues/127)，按照文中方法进行修改。但现在，程序执行到 `sbi_call` 时，就直接卡死了，问题还是没有解决
+    * 首先分析异常发生的代码，即 `src/sbi.rs:40`，发现操作系统并没有正常关闭。所以考虑sbi调用的接口是否发生了变化。但查询后，发现sbi调用的接口和常量均和原来相同。[常量](https://elixir.bootlin.com/linux/latest/C/ident/SBI_EXT_0_1_SHUTDOWN) 与 [接口文档](https://docs.rs/rustsbi/0.2.0-alpha.10/rustsbi/index.html)（下文发现这个结论是错误的，sbi调用的接口更新了。这里错误的原因是文档仍然过时）
+    * 使用搜索引擎，搜到了 [rCore-Tutorial仓库的Issue](https://github.com/rcore-os/rCore-Tutorial/issues/127)，按照文中方法进行修改。但现在，程序执行到 `sbi_call` 时，就直接卡死了，问题还是没有解决
     * 参考 [rCore-Tutorial-v3](https://github.com/rcore-os/rCore-Tutorial-v3/tree/ch1) 的lab1源代码，引入了 `sbi-rt` 库，并修改了 `src/sbi.rs`。问题成功解决！
       * ![image-20231103155326493](./README/image-20231103155326493.png)
   
   * 思考
   
     * 虽然解决了问题，但只知道死循环是接口更新导致的，并没有了解到更本质原因。所以继续分析，查阅 `sbi-rt` 文档
-    * `sbi-rt` 是 `sbi` 的运行时库，相当于帮我们实现了一套 `sbi` 接口。对比了 `sbi-rt` 的 `sbi_call` 源码，发现和我们的实现并没有区别，区别只在调用的常数上，于是跟踪到 `sbi-spec` 仓库
-    * `sbi-spec` 仓库实现了 `sbi标准` 定义的常量和结构。在 `src/srst.rs` 中，我们发现了问题的答案！`sbi标准` 确实更新了，`shutdown` 不应该直接将 `extension id` 设置为0，而是应该设置 `extension id` 为 `0x53525354`，并把 `function id` 设置为 `0`
+    * [sbi-rt](https://github.com/rustsbi/sbi-rt) 是 `sbi` 的运行时库，相当于帮我们实现了一套 `sbi` 接口。对比了 `sbi-rt` 的 `sbi_call` 源码，发现和我们的实现并没有区别，区别只在调用的常数上，于是跟踪到 `sbi-spec` 仓库
+    * [sbi-spec](https://github.com/rustsbi/sbi-spec) 实现了 `sbi标准` 定义的常量和结构。在 `src/srst.rs` 中，我们发现了问题的答案！sbi标准确实更新了，`shutdown` 不应该直接将 `extension id` 设置为0，而是应该设置 `extension id` 为 `0x53525354`，并把 `function id` 设置为 `0`。这和最开始我的猜想相同，只不过我找到了错误的文档。
   
   * 再次解决
   
     * 将 `sbi-rt` 依赖删去，并且修改 `src/sbi.rs`。执行 `make run`，成功了！
       * ![image-20231103161108235](./README/image-20231103161108235.png)
+    
+  * 接口标准更新的证明
+  
+    * 查阅 [riscv-sbi文档](https://github.com/riscv-non-isa/riscv-sbi-doc/releases/download/v2.0-rc1/riscv-sbi.pdf)，章节5提到：
+  
+      >The legacy SBI extensions is deprecated in favor of the other extensions listed below. The legacy console SBI functions (sbi_console_getchar() and sbi_console_putchar()) are expected to be deprecated; they have no replacement.
+  
+    * 在章节5.10中可以看到 legacy function table，上面提到：
+  
+      * ![image-20231103163948516](./README/image-20231103163948516.png)
+  
+    * 这足以说明，本接口确实被废弃，并且应该使用新的接口
+  
+    * 比较前后两种接口，新的接口功能性更强，可以通过 **FID** 来指定关机、冷重启、热重启等。所以我猜想，旧接口因为拓展性不足，而被废弃。
   
 * 原因
-  * `sbi标准` 更新，导致关机需要使用新的参数。如果我们没有更新参数，就会调用废弃的接口，导致程序出错。我们更新 `sbi调用` 的参数后，就可以正常关机。
+  * `sbi标准` 更新，需要使用新的API才能正常关机。
   
 * 解决方法
   * 将 `src/sbi.rs` 修改为：
@@ -204,8 +218,8 @@
 ## 3. Git提交截图
 
 * [仓库链接](github.com/YXHXianYu/GardenerOS)
-* <img src="./README/image-20231103161533791.png" alt="image-20231103161533791" style="zoom:67%;" />
+* <img src="./README/image-20231103164319004.png" alt="image-20231103164319004"  />
 
 ## 4. 其他说明
 
-* 无
+* 实验很有意思
