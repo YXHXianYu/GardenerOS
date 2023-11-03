@@ -67,7 +67,141 @@
 
 ### 2.2
 
-* 问题：
+* 问题：分析 `sbi` 模块和 `lang_items` 模块所完成的功能
+* 回答
+  * `sbi` 模块
+    * 本模块和实验1中的 `system call` 部分代码功能类似，都通过 **内联汇编** 语法，与硬件进行交互，实现了 **系统调用**。`sbi_call` 和 `syscall` 函数，大体类似，只有参数和返回值的区别。
+    * `console_putchar` 等3个函数，对 `sbi_call` 函数进行封装，实现了3种不同的系统调用，并且以 **pub** 的方式抛出接口，供外部调用。（`sbi_call` 为私有函数，其他模块无法调用）
+    * `console` 模块对 `console_putchar` 系统调用进行封装，实现了 rust 风格的输出函数与输出宏
+
+  * `lang_items` 模块
+    * 本模块名为 `lang_items`，所以本模块应该实现一些有关高级语言的特性。但在本次实验中，`lang_items` 模块只实现了 **异常** 特性，所以预测在之后的实验中，本模块的功能会被拓展。
+    * `lang_items` 实现了 **异常处理函数panic**
+    * 在实验1的 `main.rs` 中也有类似的实现
+    * 不同的是，本模块的异常处理函数实现了异常信息输出，并且新增了 `shutdown()` 系统调用。当发生异常时，操作系统会打印出异常信息，并且关机
+
+
+### 2.3
+
+* 问题：可选：如果将 `rustsbi.bin` 换成最新版本的会造成代码无法运行，分析原因并给出解决方法。
+
+* 操作流程
+  * 新建 `os-ex` 与 `bootloader-ex` 文件夹，并将原代码与最新版本的 `rustsbi-qemu.bin` 置于对应目录下
+  
+    * 我使用了2023-10-27最新pre-released `rustsbi-qemu`
+    * ![image-20231103144708017](./README/image-20231103144708017.png)
+  
+  * 进入 `os-ex`，将引导程序修改为 `bootloader-ex` 下的对应程序
+  
+    * 修改 `Makefile:8~9` 为
+  
+      ```makefile
+      SBI ?= rustsbi-qemu
+      BOOTLOADER := ../bootloader-ex/$(SBI).bin
+      ```
+  
+  * 测试
+  
+    * `make`、`make build` 均可正常执行
+    * `make run` 出现了不正常的结果，在输出 `Hello, world!` 和 `Panicked ... Shutdown machine!` 之后，程序又输出了大量 `src/sbi.rs:40 It should shutdown!` 异常和乱码（应该是无限递归调用panic函数，导致栈空间溢出），并卡死
+      * ![image-20231103145346495](./README/image-20231103145346495.png)
+  
+  * 解决
+  
+    * 首先分析异常发生的代码，即 `src/sbi.rs:40`，发现操作系统并没有正常关闭。所以考虑sbi调用的接口是否发生了变化。但查询后，发现sbi调用的接口和常量均和原来相同。[常量](https://elixir.bootlin.com/linux/latest/C/ident/SBI_EXT_0_1_SHUTDOWN) 与 [接口文档](https://docs.rs/rustsbi/0.2.0-alpha.10/rustsbi/index.html)
+    * 使用搜索引擎搜到了 [一条rCore-Tutorial仓库的Issue](https://github.com/rcore-os/rCore-Tutorial/issues/127)，按照文中方法进行修改。但现在，程序执行到 `sbi_call` 时，就直接卡死了，问题还是没有解决
+    * 参考 [rCore-Tutorial-v3](https://github.com/rcore-os/rCore-Tutorial-v3/tree/ch1) 的lab1源代码，引入了 `sbi-rt` 库，并修改了 `src/sbi.rs`。问题成功解决！
+      * ![image-20231103155326493](./README/image-20231103155326493.png)
+  
+  * 思考
+  
+    * 虽然解决了问题，但只知道死循环是接口更新导致的，并没有了解到更本质原因。所以继续分析，查阅 `sbi-rt` 文档
+    * `sbi-rt` 是 `sbi` 的运行时库，相当于帮我们实现了一套 `sbi` 接口。对比了 `sbi-rt` 的 `sbi_call` 源码，发现和我们的实现并没有区别，区别只在调用的常数上，于是跟踪到 `sbi-spec` 仓库
+    * `sbi-spec` 仓库实现了 `sbi标准` 定义的常量和结构。在 `src/srst.rs` 中，我们发现了问题的答案！`sbi标准` 确实更新了，`shutdown` 不应该直接将 `extension id` 设置为0，而是应该设置 `extension id` 为 `0x53525354`，并把 `function id` 设置为 `0`
+  
+  * 再次解决
+  
+    * 将 `sbi-rt` 依赖删去，并且修改 `src/sbi.rs`。执行 `make run`，成功了！
+      * ![image-20231103161108235](./README/image-20231103161108235.png)
+  
+* 原因
+  * `sbi标准` 更新导致关机需要使用新的参数
+  * 如果我们没有更新参数，就会调用废弃的接口，导致程序出错
+  * 我们更新 `sbi调用` 的参数后，就可以正常关机
+  
+* 解决方法
+  * 将 `src/sbi.rs` 修改为：
+  
+    ```rust
+    #![allow(unused)]
+    
+    // pub fn console_putchar(c: usize) {
+    //     #[allow(deprecated)]
+    //     sbi_rt::legacy::console_putchar(c);
+    // }
+    // 
+    // pub fn console_getchar() -> usize {
+    //     #[allow(deprecated)]
+    //     sbi_rt::legacy::console_getchar()
+    // }
+    // 
+    // pub fn shutdown() -> ! {
+    //     use sbi_rt::{system_reset, NoReason, Shutdown};
+    //     system_reset(Shutdown, NoReason);
+    //     panic!("It should shutdown!");
+    // }
+    
+    use core::arch::asm;
+    
+    const SBI_SET_TIMER: usize = 0;
+    const SBI_CONSOLE_PUTCHAR: usize = 1;
+    const SBI_CONSOLE_GETCHAR: usize = 2;
+    const SBI_CLEAR_IPI: usize = 3;
+    const SBI_SEND_IPI: usize = 4;
+    const SBI_REMOTE_FENCE_I: usize = 5;
+    const SBI_REMOTE_SFENCE_VMA: usize = 6;
+    const SBI_REMOTE_SFENCE_VMA_ASID: usize = 7;
+    const SBI_SHUTDOWN: usize = 8;
+    
+    // const SBI_STOP_EXTENSION: usize = 0x48534D;
+    // const SBI_STOP_FUNCTION: usize = 1;
+    const SBI_EID_SRST: usize = 0x53525354;
+    const SBI_SYSTEM_RESET: usize = 0;
+    
+    #[inline(always)]
+    fn sbi_call(eid: usize, fid: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
+        let mut ret;
+        unsafe {
+            asm!("ecall",
+                 in("x10") arg0,
+                 in("x11") arg1,
+                 in("x12") arg2,
+                 in("x16") fid,
+                 in("x17") eid,
+                 lateout("x10") ret
+            );
+        }
+        ret
+    }
+    
+    pub fn console_putchar(c: usize) {
+        sbi_call(SBI_CONSOLE_PUTCHAR, 0, c, 0, 0);
+    }
+    
+    pub fn console_getchar() -> usize {
+        sbi_call(SBI_CONSOLE_GETCHAR, 0, 0, 0, 0)
+    }
+    
+    pub fn shutdown_deprecated() -> ! {
+        sbi_call(SBI_SHUTDOWN, 0, 0, 0, 0);
+        panic!("It should shutdown! (deprecated shutdown function)");
+    }
+    
+    pub fn shutdown() -> ! {
+        sbi_call(SBI_EID_SRST, SBI_SYSTEM_RESET, 0, 0, 0);
+        panic!("It should shutdown!");
+    }
+    ```
 
 ## 3. Git提交截图
 
