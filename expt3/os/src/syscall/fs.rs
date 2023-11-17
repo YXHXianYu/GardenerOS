@@ -13,3 +13,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
         }
     }
 }
+
+pub fn console_getchar() -> u8 {
+    crate::sbi::console_getchar() as u8
+}

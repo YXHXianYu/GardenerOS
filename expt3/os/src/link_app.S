@@ -3,11 +3,14 @@
     .section .data
     .global _num_app
 _num_app:
-    .quad 3
+    .quad 6
     .quad app_0_start
     .quad app_1_start
     .quad app_2_start
-    .quad app_2_end
+    .quad app_3_start
+    .quad app_4_start
+    .quad app_5_start
+    .quad app_5_end
 
     .section .data
     .global app_0_start
@@ -29,3 +32,24 @@ app_1_end:
 app_2_start:
     .incbin "../user/target/riscv64gc-unknown-none-elf/release/02power.bin"
 app_2_end:
+
+    .section .data
+    .global app_3_start
+    .global app_3_end
+app_3_start:
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/03quick_power.bin"
+app_3_end:
+
+    .section .data
+    .global app_4_start
+    .global app_4_end
+app_4_start:
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/04interactive_power.bin"
+app_4_end:
+
+    .section .data
+    .global app_5_start
+    .global app_5_end
+app_5_start:
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/05placeholder.bin"
+app_5_end:

@@ -1,10 +1,18 @@
 use std::io::{Result, Write};
 use std::fs::{File, read_dir};
+use std::process::{Command, Output};
 
 fn main() {
     println!("cargo:rerun-if-changed=../user/src/");
-    println!("cargo:rerun-if-changed={}", TARGET_PATH);
+    // println!("cargo:rerun-if-changed={}", TARGET_PATH);
+    rebuild_user().unwrap();
     insert_app_data().unwrap();
+}
+
+fn rebuild_user() -> Result<Output> {
+    let mut cmd = Command::new("make");
+    cmd.arg("--directory").arg("../user").arg("build");
+    cmd.output()
 }
 
 static TARGET_PATH: &str = "../user/target/riscv64gc-unknown-none-elf/release/";
