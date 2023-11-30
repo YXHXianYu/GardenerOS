@@ -36,7 +36,7 @@ macro_rules! println {
 
 use crate::syscall::console_getchar;
 
-fn getchar() -> u8 {
+pub fn getchar() -> u8 {
     console_getchar() as u8
 }
 

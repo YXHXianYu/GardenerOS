@@ -19,15 +19,18 @@ fn quick_power(base: u64, expo: u64, modu: u64) -> u64 {
 #[no_mangle]
 fn main() -> i32 {
     print!("base    : ");
-    let base: u64 = read_u64();
+    // let base: u64 = read_u64();
+    let base: u64 = 1;
     print!("{}\n", base);
 
     print!("exponent: ");
-    let expo: u64 = read_u64();
+    // let expo: u64 = read_u64();
+    let expo: u64 = 2;
     print!("{}\n", expo);
 
     print!("modulus : ");
-    let modu: u64 = read_u64();
+    // let modu: u64 = read_u64();
+    let modu: u64 = 10;
     print!("{}\n", modu);
 
     println!(

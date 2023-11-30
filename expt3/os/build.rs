@@ -4,6 +4,7 @@ use std::process::{Command, Output};
 
 fn main() {
     println!("cargo:rerun-if-changed=../user/src/");
+    println!("cargo:rerun-if-changed=../user/src/bin");
     // println!("cargo:rerun-if-changed={}", TARGET_PATH);
     rebuild_user().unwrap();
     insert_app_data().unwrap();
