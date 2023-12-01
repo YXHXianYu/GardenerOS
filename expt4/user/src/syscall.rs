@@ -68,9 +68,11 @@ pub fn shutdown() -> ! {
     panic!("It should shutdown!");
 }
 
-// expt3
+// expt3 & 4
 const SYSCALL_WRITE: usize = 64;
-const SYSCALL_EXIT: usize = 93;
+const SYSCALL_EXIT:  usize = 93;
+const SYSCALL_YIELD: usize = 124;
+
 
 pub fn sys_write(fd: usize, buffer: &[u8]) -> usize {
     sbi_call(SYSCALL_WRITE, 0, fd, buffer.as_ptr() as usize, buffer.len())
@@ -80,3 +82,6 @@ pub fn sys_exit(exit_code: i32) -> usize {
     sbi_call(SYSCALL_EXIT, 0, exit_code as usize, 0, 0)
 }
 
+pub fn sys_yield() -> usize {
+    sbi_call(SYSCALL_YIELD, 0, 0, 0, 0)
+}

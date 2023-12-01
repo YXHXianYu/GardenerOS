@@ -11,6 +11,7 @@ mod lang_items;
 use syscall::console_getchar;
 use syscall::sys_write;
 use syscall::sys_exit;
+use syscall::sys_yield;
 
 pub fn write(fd: usize, buf: &[u8]) -> usize {
     sys_write(fd, buf)
@@ -18,6 +19,10 @@ pub fn write(fd: usize, buf: &[u8]) -> usize {
 
 pub fn exit(exit_code: i32) -> usize {
     sys_exit(exit_code)
+}
+
+pub fn yield_() -> usize {
+    sys_yield()
 }
 
 pub fn getchar() -> u8 {

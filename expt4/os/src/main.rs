@@ -8,7 +8,10 @@ mod lang_items;
 mod sbi;
 mod syscall;
 mod trap;
-mod batch;
+// mod batch;
+mod loader;
+mod config;
+mod task;
 
 /* stack memory settings */
 use core::arch::global_asm;
@@ -22,16 +25,29 @@ fn clear_bss() {
         fn sbss();
         fn ebss();
     }
-    (sbss as usize..ebss as usize).for_each(|a| unsafe { (a as *mut u8).write_volatile(0) });
+    (sbss as usize..ebss as usize).for_each(|a| {
+        unsafe { (a as *mut u8).write_volatile(0) }
+    });
 }
 
 #[no_mangle]
 pub fn rust_main() -> ! {
     clear_bss();
+    println!("[kernel] Hello, world!");
+    trap::init();
+    loader::load_apps();
+    task::run_first_task();
+    panic!("Unreachable in rust_main!");
+}
+
+#[no_mangle]
+pub fn rust_main_expt3() -> ! {
+    clear_bss();
     println!("[Kernel] Hello, world!");
     trap::init();
-    batch::init();
-    batch::run_next_app();
+    // batch::init();
+    // batch::run_next_app();
+    panic!("Unreachable in rust_main!");
 }
 
 #[no_mangle]
@@ -49,8 +65,7 @@ pub fn rust_main_expt2() -> ! {
         fn boot_stack_top();
     }
     clear_bss();
-    println!("Hello, world!");
-    println!(".text [{:#x}, {:#x})", stext as usize, etext as usize);
+    println!("Hello, world!"); println!(".text [{:#x}, {:#x})", stext as usize, etext as usize);
     println!(".rodata [{:#x}, {:#x})", srodata as usize, erodata as usize);
     println!(".data [{:#x}, {:#x})", sdata as usize, edata as usize);
     println!(
