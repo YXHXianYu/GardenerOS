@@ -25,6 +25,7 @@ use riscv::register::{
 
 use crate::syscall::syscall;
 // use crate::batch::run_next_app;
+use crate::task::exit_current_and_run_next;
 
 #[no_mangle]
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
@@ -38,10 +39,14 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
         Trap::Exception(Exception::StoreFault) |
         Trap::Exception(Exception::StorePageFault) => {
             println!("[kernel] PageFault in application, core dumped.");
+            exit_current_and_run_next();
+            // panic!("StorePageFault");
             // run_next_app();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, core dumped.");
+            exit_current_and_run_next();
+            // panic!("IllegalInstruction");
             // run_next_app();
         }
         _ => {
