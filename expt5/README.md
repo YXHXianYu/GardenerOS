@@ -72,7 +72,7 @@
 ## 3. Git提交截图
 
 * [仓库链接](https://github.com/YXHXianYu/GardenerOS)
-* 
+* <img src="./README/image-20231206123522497.png" alt="image-20231206123522497" style="zoom:67%;" />
 
 ## 4. 其他说明
 
