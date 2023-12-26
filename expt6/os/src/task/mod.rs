@@ -2,17 +2,13 @@ mod context;
 mod switch;
 mod task;
 
-use crate::trap::TrapContext;
-use crate::config::MAX_APP_NUM;
 use crate::loader::{get_num_app, get_app_data};
+use crate::trap::TrapContext;
 use crate::sync::UPSafeCell;
-
-use core::cell::RefCell;
 use lazy_static::*;
 use switch::__switch;
 use task::{TaskControlBlock, TaskStatus};
 use alloc::vec::Vec;
-
 
 pub use context::TaskContext;
 

@@ -1,10 +1,7 @@
-use core::arch::global_asm;
-use core::arch::asm;
-
-global_asm!(include_str!("trap.S"));
-
 mod context;
 
+use core::arch::asm;
+use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
     stvec,
@@ -17,20 +14,17 @@ use riscv::register::{
     stval,
     sie,
 };
-
 use crate::syscall::syscall;
 use crate::task::{
-    current_user_token,
-    current_trap_cx,
     exit_current_and_run_next,
     suspend_current_and_run_next,
+    current_user_token,
+    current_trap_cx,
 };
 use crate::timer::set_next_trigger;
 use crate::config::{TRAP_CONTEXT, TRAMPOLINE};
 
-pub fn enable_timer_interrupt() {
-    unsafe { sie::set_stimer(); }
-}
+global_asm!(include_str!("trap.S"));
 
 pub fn init() {
     set_kernel_trap_entry();
@@ -46,6 +40,10 @@ fn set_user_trap_entry() {
     unsafe {
         stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
     }
+}
+
+pub fn enable_timer_interrupt() {
+    unsafe { sie::set_stimer(); }
 }
 
 #[no_mangle]
@@ -106,4 +104,4 @@ pub fn trap_from_kernel() -> ! {
     panic!("a trap from kernel!");
 }
 
-pub use context::TrapContext;
+pub use context::{TrapContext};
