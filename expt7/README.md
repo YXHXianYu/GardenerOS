@@ -94,7 +94,7 @@
 ## 3. Git提交截图
 
 * [仓库链接](https://github.com/YXHXianYu/GardenerOS)
-* 
+* ![image-20240103155051632](./README/image-20240103155051632.png)
 
 ## 4. 其他说明
 
