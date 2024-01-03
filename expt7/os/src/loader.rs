@@ -1,3 +1,6 @@
+use alloc::vec::Vec;
+use lazy_static::*;
+
 pub fn get_num_app() -> usize {
     extern "C" { fn _num_app(); }
     unsafe { (_num_app as usize as *const usize).read_volatile() }
@@ -18,9 +21,6 @@ pub fn get_app_data(app_id: usize) -> &'static [u8] {
         )
     }
 }
-
-use alloc::vec::Vec;
-use lazy_static::*;
 
 lazy_static! {
     static ref APP_NAMES: Vec<&'static str> = {
